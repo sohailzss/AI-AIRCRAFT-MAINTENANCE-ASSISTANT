@@ -120,8 +120,8 @@ jobs:
             --region $AWS_REGION \
             --name $EKS_CLUSTER_NAME
 
-      # ----------------------------------------------------
-      # Verify AWS Identity and EKS Access
+          # ----------------------------------------------------
+      # Verify AWS Identity and EKS Permissions
       # ----------------------------------------------------
 
       - name: Verify AWS Identity and EKS Access
@@ -134,8 +134,15 @@ jobs:
             --region "$AWS_REGION" \
             --cluster-name "$EKS_CLUSTER_NAME" > /dev/null
 
-          echo "Checking Kubernetes access..."
+          echo "Checking Kubernetes nodes..."
           kubectl get nodes --request-timeout=15s
+
+          echo "Checking Secret permissions..."
+          kubectl auth can-i create secrets -n default
+          kubectl auth can-i update secrets -n default
+
+          echo "Checking existing Secret..."
+          kubectl get secret aws-credentials -n default
 
       # ----------------------------------------------------
       # Replace Backend Image
