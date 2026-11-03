@@ -126,22 +126,38 @@ jobs:
           sed -i "s|\${FRONTEND_IMAGE}|$FRONTEND_IMAGE|g" kubernetes/frontend-deployment.yaml
 
             # ----------------------------------------------------
-      # Create or Update Kubernetes Secret
+            # ----------------------------------------------------
+      # Diagnose EKS Authentication and Secret Permissions
       # ----------------------------------------------------
 
-      - name: Create or Update AWS Credentials Secret
+      - name: Diagnose EKS Secret Access
         shell: bash
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_REGION: ${{ env.AWS_REGION }}
         run: |
           set -euo pipefail
 
-          kubectl create secret generic aws-credentials --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" --from-literal=AWS_REGION="$AWS_REGION" --dry-run=client -o yaml > aws-secret.yaml
+          echo "1. Checking AWS identity"
+          aws sts get-caller-identity
 
-          kubectl apply --validate=false -f aws-secret.yaml
+          echo "2. Checking EKS token"
+          aws eks get-token \
+            --region "$AWS_REGION" \
+            --cluster-name "$EKS_CLUSTER_NAME" > /dev/null
 
+          echo "3. Checking Kubernetes nodes"
+          kubectl get nodes --request-timeout=20s
+
+          echo "4. Checking Secret creation permission"
+          kubectl auth can-i create secrets -n default
+
+          echo "5. Checking Secret update permission"
+          kubectl auth can-i update secrets -n default
+
+          echo "6. Checking existing Secret"
+          kubectl get secret aws-credentials -n default
       # ----------------------------------------------------
       # Verify Deployment
       # ----------------------------------------------------
