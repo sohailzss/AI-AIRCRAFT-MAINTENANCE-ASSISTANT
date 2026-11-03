@@ -109,6 +109,38 @@ jobs:
           --region $AWS_REGION \
           --name $EKS_CLUSTER_NAME
 
+
+          # ----------------------------------------------------
+      # Configure kubectl
+      # ----------------------------------------------------
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $EKS_CLUSTER_NAME
+
+      # ----------------------------------------------------
+      # Verify AWS Identity and EKS Access
+      # ----------------------------------------------------
+
+      - name: Verify AWS Identity and EKS Access
+        run: |
+          echo "Checking AWS identity..."
+          aws sts get-caller-identity
+
+          echo "Checking EKS authentication..."
+          aws eks get-token \
+            --region "$AWS_REGION" \
+            --cluster-name "$EKS_CLUSTER_NAME" > /dev/null
+
+          echo "Checking Kubernetes access..."
+          kubectl get nodes --request-timeout=15s
+
+      # ----------------------------------------------------
+      # Replace Backend Image
+      # ----------------------------------------------------
+
       # ----------------------------------------------------
       # Replace Backend Image
       # ----------------------------------------------------
