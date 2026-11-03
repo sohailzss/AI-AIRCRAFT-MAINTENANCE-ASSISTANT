@@ -125,25 +125,22 @@ jobs:
         run: |
           sed -i "s|\${FRONTEND_IMAGE}|$FRONTEND_IMAGE|g" kubernetes/frontend-deployment.yaml
 
-      # ----------------------------------------------------
-      # Create / Update Kubernetes Secret
-      # ----------------------------------------------------
-
-      - name: Create AWS Credentials Secret
-        run: |
-          kubectl create secret generic aws-credentials \
-            --from-literal=AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-            --from-literal=AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-            --from-literal=AWS_REGION=${{ secrets.AWS_REGION }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-            
-      # ----------------------------------------------------
-      # Deploy Kubernetes Resources
+            # ----------------------------------------------------
+      # Create or Update Kubernetes Secret
       # ----------------------------------------------------
 
-      - name: Deploy to Amazon EKS
+      - name: Create or Update AWS Credentials Secret
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          kubectl apply -f kubernetes/
+          set -euo pipefail
+
+          kubectl create secret generic aws-credentials --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" --from-literal=AWS_REGION="$AWS_REGION" --dry-run=client -o yaml > aws-secret.yaml
+
+          kubectl apply --validate=false -f aws-secret.yaml
 
       # ----------------------------------------------------
       # Verify Deployment
